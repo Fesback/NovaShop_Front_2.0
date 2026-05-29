@@ -1,203 +1,160 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Check } from 'lucide-react';
-import { useAuth } from '@/context';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Check, MapPin, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import api from '@/lib/api'; 
+import axios from 'axios'; 
 
 const passwordRequirements = [
-  { id: 'length', label: 'At least 8 characters', test: (p) => p.length >= 8 },
-  { id: 'upper', label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
-  { id: 'lower', label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
-  { id: 'number', label: 'One number', test: (p) => /\d/.test(p) },
+  { id: 'length', label: 'Al menos 8 caracteres', test: (p) => p.length >= 8 },
+  { id: 'upper', label: 'Una letra mayúscula', test: (p) => /[A-Z]/.test(p) },
+  { id: 'lower', label: 'Una letra minúscula', test: (p) => /[a-z]/.test(p) },
+  { id: 'number', label: 'Un número', test: (p) => /\d/.test(p) },
 ];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '',
+    nombre: '',
+    apellido: '',
     email: '',
-    password: '',
+    contrasena: '',
     confirmPassword: '',
+    direccion: '',
+    telefono: '',
   });
 
-  const passwordValid = passwordRequirements.every((r) =>
-    r.test(formData.password)
-  );
-  const passwordsMatch = formData.password === formData.confirmPassword;
+  const passwordValid = passwordRequirements.every((r) => r.test(formData.contrasena));
+  const passwordsMatch = formData.contrasena === formData.confirmPassword;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (!passwordValid) {
-      setError('Please meet all password requirements');
+      setError('Por favor, cumple con todos los requisitos de la contraseña.');
       return;
     }
 
     if (!passwordsMatch) {
-      setError('Passwords do not match');
+      setError('Las contraseñas no coinciden.');
       return;
     }
 
     setIsLoading(true);
 
+    const payload = {
+      nombre: formData.nombre,
+      apellido: formData.apellido,
+      email: formData.email,
+      contrasena: formData.contrasena,
+      direccion: formData.direccion,
+      telefono: formData.telefono,
+    };
+
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.post('/auth/register', payload);
 
-      login({
-        id: Date.now().toString(),
-        name: formData.name,
-        email: formData.email,
-        role: 'user',
-      });
+      try {
+        await axios.post(`${import.meta.env.VITE_NOTIF_API_URL}/api/notificaciones/correo`, {
+          correo: formData.email,
+          asunto: "🎉 Bienvenido a NovaShop",
+          contenido: `Hola ${formData.nombre}, gracias por registrarte en NovaShop. Estamos felices de tenerte con nosotros.`
+        });
+      } catch (notifError) {
+        console.warn("El usuario se registró, pero falló el envío del correo:", notifError);
+      }
 
-      navigate('/', { replace: true });
-    } catch {
-      setError('Something went wrong. Please try again.');
+      setSuccess('¡Registro exitoso! Redirigiendo al login...');
+      
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+
+    } catch (err) {
+      console.error("Error en el registro:", err);
+      const serverMessage = err.response?.data?.message || err.response?.data?.error;
+      setError(serverMessage || 'Ocurrió un error al intentar crear la cuenta.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-semibold text-foreground mb-2">
-          Create an account
-        </h1>
-        <p className="text-muted-foreground">
-          Join us for a premium shopping experience
-        </p>
+        <h1 className="text-2xl font-semibold text-foreground mb-2">Crear una cuenta</h1>
+        <p className="text-muted-foreground">Únete para una experiencia de compra premium</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
             {error}
           </div>
         )}
+        {success && (
+          <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-sm text-green-600">
+            {success}
+          </div>
+        )}
 
-        <Input
-          label="Full Name"
-          type="text"
-          required
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="John Doe"
-          icon={User}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input label="Nombre" required value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="John" icon={User} />
+          <Input label="Apellido" required value={formData.apellido} onChange={(e) => setFormData({ ...formData, apellido: e.target.value })} placeholder="Doe" icon={User} />
+        </div>
 
-        <Input
-          label="Email"
-          type="email"
-          required
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="your@email.com"
-          icon={Mail}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input label="Email" type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" icon={Mail} />
+          <Input label="Teléfono" type="tel" required value={formData.telefono} onChange={(e) => setFormData({ ...formData, telefono: e.target.value })} placeholder="+51 999 999 999" icon={Phone} />
+        </div>
+
+        <Input label="Dirección Completa" required value={formData.direccion} onChange={(e) => setFormData({ ...formData, direccion: e.target.value })} placeholder="Calle, número, distrito" icon={MapPin} />
 
         <div className="relative">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            required
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="Create a password"
-            icon={Lock}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showPassword ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
+          <Input label="Contraseña" type={showPassword ? 'text' : 'password'} required value={formData.contrasena} onChange={(e) => setFormData({ ...formData, contrasena: e.target.value })} placeholder="Crea una contraseña" icon={Lock} />
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground transition-colors">
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Password Requirements */}
-        {formData.password && (
-          <div className="space-y-2">
+        {/* Requisitos de Contraseña */}
+        {formData.contrasena && (
+          <div className="space-y-2 bg-secondary/20 p-3 rounded-lg border border-border">
             {passwordRequirements.map((req) => (
-              <div
-                key={req.id}
-                className={`flex items-center gap-2 text-xs transition-colors ${
-                  req.test(formData.password) ? 'text-accent' : 'text-muted'
-                }`}
-              >
-                <Check
-                  className={`w-3 h-3 ${
-                    req.test(formData.password) ? 'opacity-100' : 'opacity-30'
-                  }`}
-                />
+              <div key={req.id} className={`flex items-center gap-2 text-xs transition-colors ${req.test(formData.contrasena) ? 'text-green-500' : 'text-muted-foreground'}`}>
+                <Check className={`w-3 h-3 ${req.test(formData.contrasena) ? 'opacity-100' : 'opacity-30'}`} />
                 {req.label}
               </div>
             ))}
           </div>
         )}
 
-        <Input
-          label="Confirm Password"
-          type="password"
-          required
-          value={formData.confirmPassword}
-          onChange={(e) =>
-            setFormData({ ...formData, confirmPassword: e.target.value })
-          }
-          placeholder="Confirm your password"
-          icon={Lock}
-          error={
-            formData.confirmPassword && !passwordsMatch
-              ? 'Passwords do not match'
-              : undefined
-          }
+        <Input 
+          label="Confirmar Contraseña" type="password" required 
+          value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} 
+          placeholder="Confirma tu contraseña" icon={Lock} 
+          error={formData.confirmPassword && !passwordsMatch ? 'Las contraseñas no coinciden' : undefined} 
         />
 
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            required
-            className="w-4 h-4 rounded border-border text-accent focus:ring-accent mt-0.5"
-          />
-          <span className="text-sm text-muted-foreground">
-            I agree to the{' '}
-            <Link to="/terms" className="text-accent hover:underline">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link to="/privacy" className="text-accent hover:underline">
-              Privacy Policy
-            </Link>
-          </span>
-        </label>
-
-        <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
-          Create Account
-          <ArrowRight className="w-4 h-4 ml-2" />
+        <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={success !== ''}>
+          {success ? 'Cuenta Creada' : 'Crear Cuenta'}
+          {!success && <ArrowRight className="w-4 h-4 ml-2" />}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground mt-8">
-        Already have an account?{' '}
-        <Link to="/login" className="text-accent hover:underline">
-          Sign in
+        ¿Ya tienes una cuenta?{' '}
+        <Link to="/login" className="text-foreground font-medium hover:underline">
+          Inicia sesión
         </Link>
       </p>
     </motion.div>

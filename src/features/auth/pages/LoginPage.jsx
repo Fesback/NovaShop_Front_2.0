@@ -5,6 +5,7 @@ import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import api from '@/lib/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -27,20 +28,25 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Demo login - accept any credentials
-      login({
-        id: '1',
-        name: formData.email.split('@')[0],
+      const response = await api.post('/auth/login', {
         email: formData.email,
-        role: formData.email.includes('admin') ? 'admin' : 'user',
+        contrasena: formData.password
       });
 
-      navigate(from, { replace: true });
-    } catch {
-      setError('Invalid email or password');
+      const { token } = response.data;
+
+      if (token) {
+        localStorage.setItem('token', token);
+        login(token);
+
+        navigate(from, { replace: true });
+      } else {
+        setError('No se recibió una firma de autenticación válida del servidor.');
+      }
+    } catch (err) {
+      console.error('Error de autenticación:', err);
+      const serverMessage = err.response?.data?.message || err.response?.data?.error;
+      setError(serverMessage || 'Credenciales inválidas o error de conexión con el microservicio.');
     } finally {
       setIsLoading(false);
     }
@@ -93,11 +99,7 @@ export default function LoginPage() {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            {showPassword ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
 
@@ -109,10 +111,7 @@ export default function LoginPage() {
             />
             <span className="text-sm text-muted-foreground">Remember me</span>
           </label>
-          <Link
-            to="/forgot-password"
-            className="text-sm text-accent hover:underline"
-          >
+          <Link to="/forgot-password" className="text-sm text-accent hover:underline">
             Forgot password?
           </Link>
         </div>
@@ -129,21 +128,6 @@ export default function LoginPage() {
           Create one
         </Link>
       </p>
-
-      <div className="mt-8">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Demo Credentials</span>
-          </div>
-        </div>
-        <div className="mt-4 text-center text-xs text-muted-foreground">
-          <p>User: user@example.com / any password</p>
-          <p>Admin: admin@example.com / any password</p>
-        </div>
-      </div>
     </motion.div>
   );
 }

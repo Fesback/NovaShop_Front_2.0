@@ -79,7 +79,7 @@ export function Navbar() {
             >
               {isAuthenticated ? (
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                 </span>
               ) : (
                 <User size={18} />

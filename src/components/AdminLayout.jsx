@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
 import {
-    LayoutDashboard,
+  LayoutDashboard,
   Package,
   Tags,
   ShoppingBag,
