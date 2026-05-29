@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   Lock,
 } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/context/useCart';
 import { Container } from '@/components/Brand';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
